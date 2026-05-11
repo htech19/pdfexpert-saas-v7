@@ -1,10 +1,13 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { getDb } from "./db";
+import { processingHistory } from "../drizzle/schema";
+import { eq, desc } from "drizzle-orm";
+import { z } from "zod";
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -17,12 +20,43 @@ export const appRouter = router({
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  processing: router({
+    upload: protectedProcedure
+      .input(z.object({ fileName: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database não disponível");
+
+        await db.insert(processingHistory).values({
+          userId: ctx.user.id,
+          fileName: input.fileName,
+          status: 'processing',
+          totalImages: 0,
+          processedImages: 0,
+          discardedImages: 0
+        });
+
+        return {
+          processingId: Date.now(),
+          message: "Processamento iniciado"
+        };
+      }),
+    
+    getHistory: protectedProcedure
+      .query(async ({ ctx }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        const history = await db
+          .select()
+          .from(processingHistory)
+          .where(eq(processingHistory.userId, ctx.user.id))
+          .orderBy(desc(processingHistory.createdAt))
+          .limit(10);
+
+        return history || [];
+      })
+  })
 });
 
 export type AppRouter = typeof appRouter;
