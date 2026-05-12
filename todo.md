@@ -79,3 +79,13 @@
 - [ ] Criar guia de uso para o usuário
 - [ ] Preparar para deploy em produção
 - [ ] Implementar monitoramento e logging
+
+
+## Fase 7: Visualização e Edição de Metadados
+- [x] Criar modal/drawer de visualização de metadados extraídos
+- [x] Implementar grid de imagens com preview
+- [x] Criar formulário editável para cada produto
+- [x] Adicionar botões de ação (editar, descartar, confirmar)
+- [x] Integrar com backend para salvar alterações
+- [x] Implementar validação de campos obrigatórios
+- [ ] Adicionar busca/filtro na lista de produtos

@@ -1,11 +1,8 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { getDb } from "./db";
-import { processingHistory } from "../drizzle/schema";
-import { eq, desc } from "drizzle-orm";
-import { z } from "zod";
+import { publicProcedure, router } from "./_core/trpc";
+import { processingRouter } from "./routers/processingRouter";
 
 export const appRouter = router({
   system: systemRouter,
@@ -20,43 +17,7 @@ export const appRouter = router({
     }),
   }),
 
-  processing: router({
-    upload: protectedProcedure
-      .input(z.object({ fileName: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("Database não disponível");
-
-        await db.insert(processingHistory).values({
-          userId: ctx.user.id,
-          fileName: input.fileName,
-          status: 'processing',
-          totalImages: 0,
-          processedImages: 0,
-          discardedImages: 0
-        });
-
-        return {
-          processingId: Date.now(),
-          message: "Processamento iniciado"
-        };
-      }),
-    
-    getHistory: protectedProcedure
-      .query(async ({ ctx }) => {
-        const db = await getDb();
-        if (!db) return [];
-
-        const history = await db
-          .select()
-          .from(processingHistory)
-          .where(eq(processingHistory.userId, ctx.user.id))
-          .orderBy(desc(processingHistory.createdAt))
-          .limit(10);
-
-        return history || [];
-      })
-  })
+  processing: processingRouter
 });
 
 export type AppRouter = typeof appRouter;

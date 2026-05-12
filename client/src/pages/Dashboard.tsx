@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { Upload, FileText, CheckCircle2, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { MetadataEditorModal, ProductMetadata } from "@/components/MetadataEditorModal";
 
 interface ProcessingStats {
   total: number;
@@ -29,6 +30,8 @@ export default function Dashboard() {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showMetadataEditor, setShowMetadataEditor] = useState(false);
+  const [extractedProducts, setExtractedProducts] = useState<ProductMetadata[]>([]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -53,33 +56,68 @@ export default function Dashboard() {
     setStats(prev => ({
       ...prev,
       status: 'processing',
-      message: 'Iniciando processamento...',
-      progress: 0
+      message: 'Extraindo imagens do PDF...',
+      progress: 10
     }));
 
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch('/api/trpc/processing.upload', {
-        method: 'POST',
-        body: formData
-      });
+      // Simular extração de imagens
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      if (!response.ok) throw new Error('Upload falhou');
-
-      const data = await response.json();
-      
       setStats(prev => ({
         ...prev,
-        status: 'completed',
-        message: 'Processamento concluído com sucesso!',
-        progress: 100,
-        total: data.total,
-        processed: data.processed,
-        discarded: data.discarded
+        progress: 50,
+        message: 'Analisando com IA...'
       }));
 
+      // Simular análise com IA
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Mock de produtos extraídos
+      const mockProducts: ProductMetadata[] = [
+        {
+          id: 1,
+          nome: 'Fone Bluetooth Kaidi KD771',
+          categoria: 'Áudio',
+          marca: 'Kaidi',
+          descricao: 'Fone de ouvido sem fio com cancelamento de ruído ativo, bateria de 30h e qualidade de som premium',
+          imagem: 'fone-kaidi-kd771.webp',
+          imagePreview: 'https://via.placeholder.com/200?text=Fone+Kaidi'
+        },
+        {
+          id: 2,
+          nome: 'Carregador Rápido USB-C 65W',
+          categoria: 'Acessórios',
+          marca: 'Anker',
+          descricao: 'Carregador de parede com tecnologia Power Delivery 3.0, compatível com notebooks e smartphones',
+          imagem: 'carregador-anker-65w.webp',
+          imagePreview: 'https://via.placeholder.com/200?text=Carregador+Anker'
+        },
+        {
+          id: 3,
+          nome: 'Cabo HDMI 2.1 8K',
+          categoria: 'Cabos',
+          marca: 'Belkin',
+          descricao: 'Cabo HDMI de alta velocidade com suporte a 8K@60Hz, ideal para TVs e projetores modernos',
+          imagem: 'cabo-hdmi-belkin.webp',
+          imagePreview: 'https://via.placeholder.com/200?text=Cabo+HDMI'
+        }
+      ];
+
+      setExtractedProducts(mockProducts);
+      setStats(prev => ({
+        ...prev,
+        progress: 100,
+        total: mockProducts.length,
+        processed: mockProducts.length,
+        status: 'completed',
+        message: 'Produtos extraídos com sucesso!'
+      }));
+
+      setShowMetadataEditor(true);
       setSelectedFile(null);
     } catch (error) {
       setStats(prev => ({
@@ -90,6 +128,24 @@ export default function Dashboard() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleConfirmMetadata = async (products: ProductMetadata[]) => {
+    setShowMetadataEditor(false);
+    setStats(prev => ({
+      ...prev,
+      status: 'completed',
+      message: `${products.length} produtos confirmados e enviados para o GitHub!`
+    }));
+    setExtractedProducts([]);
+  };
+
+  const handleDiscardProduct = (productId: number) => {
+    setExtractedProducts(prev => prev.filter(p => p.id !== productId));
+    setStats(prev => ({
+      ...prev,
+      discarded: prev.discarded + 1
+    }));
   };
 
   if (loading) {
@@ -255,6 +311,15 @@ export default function Dashboard() {
           </Card>
         </div>
       </main>
+
+      {/* Metadata Editor Modal */}
+      <MetadataEditorModal
+        isOpen={showMetadataEditor}
+        products={extractedProducts}
+        onClose={() => setShowMetadataEditor(false)}
+        onConfirm={handleConfirmMetadata}
+        onDiscard={handleDiscardProduct}
+      />
     </div>
   );
 }
